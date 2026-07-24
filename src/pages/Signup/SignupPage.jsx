@@ -5,6 +5,7 @@ import { FiArrowRight, FiLock, FiMail, FiUser } from 'react-icons/fi'
 import Button from '../../components/buttons/Button.jsx'
 import Input from '../../components/forms/Input.jsx'
 import { useAppContext } from '../../hooks/useAppContext.js'
+import { getApiErrorMessage } from '../../services/api.js'
 
 function getPasswordStrength(password) {
   if (password.length < 6) return { label: 'Weak', width: '33%', tone: 'bg-rose-300' }
@@ -27,7 +28,7 @@ export default function SignupPage() {
     return {
       name: !form.name.trim() ? 'Name is required.' : '',
       email: !form.email.includes('@') ? 'Valid email required.' : '',
-      password: form.password.length < 8 ? 'Use at least 8 characters.' : '',
+      password: form.password.length < 6 ? 'Use at least 6 characters.' : '',
       confirmPassword:
         form.confirmPassword && form.confirmPassword !== form.password
           ? 'Passwords do not match.'
@@ -37,8 +38,10 @@ export default function SignupPage() {
 
   const passwordStrength = getPasswordStrength(form.password)
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
+
+    if (isLoading) return
 
     if (
       validation.name ||
@@ -51,11 +54,19 @@ export default function SignupPage() {
     }
 
     setIsLoading(true)
-    window.setTimeout(() => {
-      signup(form)
-      toast.success('Workspace initialized.')
+    try {
+      await signup({
+        name: form.name,
+        email: form.email,
+        password: form.password,
+      })
+      toast.success('Signup successful.')
       navigate('/dashboard')
-    }, 700)
+    } catch (error) {
+      toast.error(getApiErrorMessage(error))
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (

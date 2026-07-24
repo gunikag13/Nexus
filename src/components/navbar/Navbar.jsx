@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import toast from 'react-hot-toast'
 import { FiBell, FiChevronDown, FiMenu, FiSearch } from 'react-icons/fi'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAppContext } from '../../hooks/useAppContext.js'
@@ -93,8 +94,9 @@ export default function Navbar({ onMenuClick }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => {
-                    logout()
+                  onClick={async () => {
+                    await logout()
+                    toast.success('Logout successful.')
                     setIsProfileOpen(false)
                     navigate('/login')
                   }}

@@ -1,4 +1,5 @@
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom'
+import PageLoader from './components/cards/PageLoader.jsx'
 import AppLayout from './layout/AppLayout.jsx'
 import { useAppContext } from './hooks/useAppContext.js'
 import LandingPage from './pages/Landing/LandingPage.jsx'
@@ -13,7 +14,11 @@ import SettingsPage from './pages/Settings/SettingsPage.jsx'
 import SignupPage from './pages/Signup/SignupPage.jsx'
 
 function ProtectedRoutes() {
-  const { isAuthenticated } = useAppContext()
+  const { authLoading, isAuthenticated } = useAppContext()
+
+  if (authLoading) {
+    return <PageLoader />
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />
@@ -27,7 +32,11 @@ function ProtectedRoutes() {
 }
 
 function PublicOnlyRoutes() {
-  const { isAuthenticated } = useAppContext()
+  const { authLoading, isAuthenticated } = useAppContext()
+
+  if (authLoading) {
+    return <PageLoader />
+  }
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />

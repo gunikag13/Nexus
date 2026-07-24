@@ -1,4 +1,5 @@
 import { FiLogOut, FiX } from 'react-icons/fi'
+import toast from 'react-hot-toast'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { navItems } from '../../constants/app.js'
 import { useAppContext } from '../../hooks/useAppContext.js'
@@ -8,8 +9,9 @@ export default function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate()
   const { currentUser, logout } = useAppContext()
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
+    toast.success('Logout successful.')
     navigate('/login')
   }
 

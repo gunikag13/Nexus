@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { AppContext } from './app-context.js'
+import { authService, setAuthToken } from '../services/api.js'
 import {
   activities,
   aiSuggestions,
@@ -13,17 +14,34 @@ import {
 } from '../utils/mockData.js'
 
 const THEME_KEY = 'nexus-theme'
-const AUTH_KEY = 'nexus-auth'
+const TOKEN_KEY = 'nexus-token'
 const USER_KEY = 'nexus-user'
+
+function buildUserProfile(profile) {
+  const name = profile?.name || user.name
+
+  return {
+    ...user,
+    ...profile,
+    id: profile?.id || profile?._id || user.id,
+    avatar: name
+      .split(' ')
+      .map((part) => part[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase(),
+    course: profile?.course || user.course,
+    streak: profile?.streak || user.streak,
+  }
+}
 
 export function AppProvider({ children }) {
   const [theme, setTheme] = useState(() => localStorage.getItem(THEME_KEY) || 'dark')
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem(AUTH_KEY) === 'true'
-  })
+  const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY) || '')
+  const [authLoading, setAuthLoading] = useState(Boolean(localStorage.getItem(TOKEN_KEY)))
   const [currentUser, setCurrentUser] = useState(() => {
     const storedUser = localStorage.getItem(USER_KEY)
-    return storedUser ? JSON.parse(storedUser) : user
+    return storedUser ? buildUserProfile(JSON.parse(storedUser)) : user
   })
   const [searchQuery, setSearchQuery] = useState('')
   const [noteItems, setNoteItems] = useState(notes)
@@ -41,47 +59,65 @@ export function AppProvider({ children }) {
   }, [theme])
 
   useEffect(() => {
-    localStorage.setItem(AUTH_KEY, String(isAuthenticated))
-  }, [isAuthenticated])
+    const restoreSession = async () => {
+      if (!token) {
+        setAuthLoading(false)
+        return
+      }
 
-  useEffect(() => {
-    localStorage.setItem(USER_KEY, JSON.stringify(currentUser))
-  }, [currentUser])
+      setAuthToken(token)
 
-  const login = ({ email }) => {
-    const fallbackName = email?.split('@')[0]?.replace(/[._-]+/g, ' ') || user.name
+      try {
+        const response = await authService.getMe()
+        const restoredUser = buildUserProfile(response.data.data.user)
 
-    setCurrentUser((previous) => ({
-      ...previous,
-      name: previous.name === 'Student' ? fallbackName : previous.name,
-      email,
-      avatar: (previous.name === 'Student' ? fallbackName : previous.name)
-        .split(' ')
-        .map((part) => part[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase(),
-    }))
-    setIsAuthenticated(true)
+        setCurrentUser(restoredUser)
+        localStorage.setItem(USER_KEY, JSON.stringify(restoredUser))
+      } catch {
+        setToken('')
+        setAuthToken('')
+        setCurrentUser(user)
+        localStorage.removeItem(USER_KEY)
+      } finally {
+        setAuthLoading(false)
+      }
+    }
+
+    restoreSession()
+  }, [token])
+
+  const completeAuth = ({ user: authenticatedUser, token: authToken }) => {
+    const nextUser = buildUserProfile(authenticatedUser)
+
+    setToken(authToken)
+    setAuthToken(authToken)
+    setCurrentUser(nextUser)
+    localStorage.setItem(USER_KEY, JSON.stringify(nextUser))
   }
 
-  const signup = ({ email, name }) => {
-    setCurrentUser((previous) => ({
-      ...previous,
-      name,
-      email,
-      avatar: name
-        .split(' ')
-        .map((part) => part[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase(),
-    }))
-    setIsAuthenticated(true)
+  const login = async (credentials) => {
+    const response = await authService.login(credentials)
+    completeAuth(response.data.data)
+    return response.data
   }
 
-  const logout = () => {
-    setIsAuthenticated(false)
+  const signup = async (payload) => {
+    const response = await authService.signup(payload)
+    completeAuth(response.data.data)
+    return response.data
+  }
+
+  const logout = async () => {
+    try {
+      if (token) {
+        await authService.logout()
+      }
+    } finally {
+      setToken('')
+      setAuthToken('')
+      setCurrentUser(user)
+      localStorage.removeItem(USER_KEY)
+    }
   }
 
   const toggleTheme = () => {
@@ -162,7 +198,8 @@ export function AppProvider({ children }) {
         deleteNote,
         deleteTask,
         flashcardItems,
-        isAuthenticated,
+        authLoading,
+        isAuthenticated: Boolean(token && currentUser?.email),
         login,
         logout,
         noteItems,

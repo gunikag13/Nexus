@@ -6,6 +6,7 @@ import Button from '../../components/buttons/Button.jsx'
 import Checkbox from '../../components/forms/Checkbox.jsx'
 import Input from '../../components/forms/Input.jsx'
 import { useAppContext } from '../../hooks/useAppContext.js'
+import { getApiErrorMessage } from '../../services/api.js'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -21,14 +22,16 @@ export default function LoginPage() {
     return {
       email: !form.email.includes('@') ? 'Enter a valid email address.' : '',
       password:
-        form.password.length && form.password.length < 8
-          ? 'Password should be at least 8 characters.'
+        form.password.length && form.password.length < 6
+          ? 'Password should be at least 6 characters.'
           : '',
     }
   }, [form.email, form.password])
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
+
+    if (isLoading) return
 
     if (!form.email || !form.password || errors.email || errors.password) {
       toast.error('Please fix the login form errors.')
@@ -36,11 +39,15 @@ export default function LoginPage() {
     }
 
     setIsLoading(true)
-    window.setTimeout(() => {
-      login(form)
+    try {
+      await login(form)
       toast.success(`Welcome back${remember ? ', session remembered' : ''}.`)
       navigate('/dashboard')
-    }, 700)
+    } catch (error) {
+      toast.error(getApiErrorMessage(error))
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
