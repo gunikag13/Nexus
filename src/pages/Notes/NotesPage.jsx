@@ -1,134 +1,251 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
-import { FiBookOpen, FiPlus, FiSearch } from 'react-icons/fi'
-import AIOutputModal from '../../components/modals/AIOutputModal.jsx'
+import { FiBookOpen, FiChevronLeft, FiChevronRight, FiPlus, FiSearch } from 'react-icons/fi'
 import Button from '../../components/buttons/Button.jsx'
 import EmptyState from '../../components/cards/EmptyState.jsx'
+import ErrorState from '../../components/cards/ErrorState.jsx'
 import NoteCard from '../../components/cards/NoteCard.jsx'
+import PageLoader from '../../components/cards/PageLoader.jsx'
 import Input from '../../components/forms/Input.jsx'
 import NoteEditorModal from '../../components/modals/NoteEditorModal.jsx'
 import NotePreviewModal from '../../components/modals/NotePreviewModal.jsx'
 import { noteSortOptions } from '../../constants/app.js'
 import { useAppContext } from '../../hooks/useAppContext.js'
+import { getApiErrorMessage, notesService } from '../../services/api.js'
 import { subjects } from '../../utils/mockData.js'
 
-const aiTemplates = {
-  summary: (note) => `## Summary\n\n- ${note.title} covers the main concepts of ${note.subject}.\n- Focus on the key definitions, examples, and comparisons.\n- Review this note once more before your next revision block.`,
-  eli5: (note) => `## Explain Like I'm 5\n\nImagine ${note.subject} is a game with simple rules. This note is teaching you the rules in small steps so you can play the game without getting confused.`,
-  flashcards: (note) => `## Flashcards\n\n1. **Q:** What is the core topic of "${note.title}"?\n   **A:** ${note.subject}\n\n2. **Q:** What should you remember first?\n   **A:** The major concept and one example from the note.`,
-  quiz: (note) => `## Mini Quiz\n\n1. What is the main idea behind **${note.title}**?\n2. Which example from the note best explains the concept?\n3. What is one likely exam question from this topic?`,
-}
+const PAGE_LIMIT = 12
+
+const getPreview = (content) => content.replaceAll('#', '').replaceAll('\n', ' ').slice(0, 100)
+
+const normalizeNote = (note) => ({
+  ...note,
+  preview: getPreview(note.content),
+  lastEdited: note.updatedAt,
+})
+
+const getTagsFromInput = (tagsInput = '') =>
+  tagsInput
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+
+const toEditorForm = (note) => ({
+  ...note,
+  tagsInput: note.tags?.join(', ') ?? '',
+})
 
 export default function NotesPage() {
-  const {
-    addNote,
-    deleteNote,
-    noteItems,
-    searchQuery,
-    toggleFavoriteNote,
-    updateNote,
-  } = useAppContext()
+  const { searchQuery } = useAppContext()
+  const [notes, setNotes] = useState([])
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: PAGE_LIMIT,
+    total: 0,
+    pages: 1,
+  })
   const [selectedNote, setSelectedNote] = useState(null)
   const [editorNote, setEditorNote] = useState(null)
-  const [localSearch, setLocalSearch] = useState('')
-  const [subjectFilter, setSubjectFilter] = useState('All')
-  const [sortBy, setSortBy] = useState('latest')
-  const [aiState, setAiState] = useState({
-    loading: false,
-    note: null,
-    output: '',
-    title: '',
+  const [filters, setFilters] = useState({
+    localSearch: '',
+    page: 1,
+    sortBy: 'newest',
+    subjectFilter: 'All',
   })
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [error, setError] = useState('')
 
-  const filteredNotes = useMemo(() => {
-    const combinedQuery = `${searchQuery} ${localSearch}`.toLowerCase().trim()
-    let nextNotes = noteItems.filter((note) => {
-      const matchesSearch = `${note.title} ${note.preview} ${note.subject}`
-        .toLowerCase()
-        .includes(combinedQuery)
-      const matchesSubject =
-        subjectFilter === 'All' || note.subject === subjectFilter
+  const blankNote = useMemo(
+    () => ({
+      id: '',
+      title: '',
+      subject: 'General',
+      content: '',
+      tagsInput: '',
+    }),
+    [],
+  )
 
-      return matchesSearch && matchesSubject
-    })
+  const loadNotes = useCallback(async (nextFilters = filters) => {
+    setIsLoading(true)
+    setError('')
 
-    if (sortBy === 'latest') {
-      nextNotes = nextNotes.sort(
-        (first, second) => new Date(second.lastEdited) - new Date(first.lastEdited),
-      )
+    const combinedSearch = `${searchQuery} ${nextFilters.localSearch}`.trim()
+
+    try {
+      const response = await notesService.getAll({
+        search: combinedSearch,
+        subject:
+          nextFilters.subjectFilter === 'All' ? undefined : nextFilters.subjectFilter,
+        sort: nextFilters.sortBy,
+        page: nextFilters.page,
+        limit: PAGE_LIMIT,
+      })
+
+      setNotes(response.data.data.notes.map(normalizeNote))
+      setPagination(response.data.data.pagination)
+    } catch (loadError) {
+      setError(getApiErrorMessage(loadError))
+    } finally {
+      setIsLoading(false)
     }
+  }, [filters, searchQuery])
 
-    if (sortBy === 'oldest') {
-      nextNotes = nextNotes.sort(
-        (first, second) => new Date(first.lastEdited) - new Date(second.lastEdited),
-      )
-    }
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      loadNotes()
+    }, 150)
 
-    if (sortBy === 'alphabetical') {
-      nextNotes = nextNotes.sort((first, second) => first.title.localeCompare(second.title))
-    }
+    return () => window.clearTimeout(timeoutId)
+  }, [loadNotes])
 
-    if (sortBy === 'favorites') {
-      nextNotes = nextNotes.filter((note) => note.favorite)
-    }
-
-    return nextNotes
-  }, [localSearch, noteItems, searchQuery, sortBy, subjectFilter])
-
-  const blankNote = {
-    id: '',
-    title: '',
-    subject: 'General',
-    content: '',
+  const updateFilters = (updates) => {
+    setFilters((previous) => ({
+      ...previous,
+      ...updates,
+      page: updates.page ?? 1,
+    }))
   }
 
   const handleAddNote = () => {
     setEditorNote(blankNote)
   }
 
-  const handleSaveNote = () => {
+  const getPayload = (note) => ({
+    title: note.title,
+    content: note.content,
+    subject: note.subject,
+    tags: getTagsFromInput(note.tagsInput),
+  })
+
+  const handleSaveNote = async () => {
+    if (isSaving) return
+
     if (!editorNote.title.trim() || !editorNote.content.trim()) {
       toast.error('Title and markdown content are required.')
       return
     }
 
-    if (editorNote.id) {
-      updateNote(editorNote.id, editorNote)
-      toast.success('Note updated.')
-    } else {
-      addNote({
-        ...editorNote,
-        preview: editorNote.content.replaceAll('#', '').replaceAll('\n', ' ').slice(0, 100),
-      })
-      toast.success('Note created.')
+    if (editorNote.title.trim().length > 150) {
+      toast.error('Title cannot exceed 150 characters.')
+      return
     }
 
-    setEditorNote(null)
-  }
+    setIsSaving(true)
 
-  const handleAiAction = (type, note) => {
-    setAiState({
-      loading: true,
-      note,
-      output: '',
-      title: `AI ${type}`,
+    if (editorNote.id) {
+      try {
+        const response = await notesService.update(editorNote.id, getPayload(editorNote))
+        const updatedNote = normalizeNote(response.data.data.note)
+
+        setNotes((previous) =>
+          previous.map((note) => (note.id === updatedNote.id ? updatedNote : note)),
+        )
+        setSelectedNote((previous) =>
+          previous?.id === updatedNote.id ? updatedNote : previous,
+        )
+        setEditorNote(null)
+        toast.success('Note updated.')
+      } catch (saveError) {
+        toast.error(getApiErrorMessage(saveError))
+      } finally {
+        setIsSaving(false)
+      }
+
+      return
+    }
+
+    const temporaryNote = normalizeNote({
+      id: `temp-${Date.now()}`,
+      ...getPayload(editorNote),
+      isPinned: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     })
 
-    window.setTimeout(() => {
-      setAiState({
-        loading: false,
-        note,
-        output: aiTemplates[type](note),
-        title:
-          type === 'summary'
-            ? 'AI Summary'
-            : type === 'eli5'
-              ? "Explain Like I'm 5"
-              : type === 'flashcards'
-                ? 'Generated Flashcards'
-                : 'Generated Quiz',
-      })
-    }, 900)
+    setNotes((previous) => [temporaryNote, ...previous])
+    setEditorNote(null)
+
+    try {
+      const response = await notesService.create(getPayload(editorNote))
+      const createdNote = normalizeNote(response.data.data.note)
+
+      setNotes((previous) =>
+        previous.map((note) => (note.id === temporaryNote.id ? createdNote : note)),
+      )
+      setPagination((previous) => ({
+        ...previous,
+        total: previous.total + 1,
+      }))
+      toast.success('Note created.')
+    } catch (saveError) {
+      setNotes((previous) => previous.filter((note) => note.id !== temporaryNote.id))
+      toast.error(getApiErrorMessage(saveError))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDeleteNote = async (noteId) => {
+    const previousNotes = notes
+    const deletedNote = notes.find((note) => note.id === noteId)
+
+    setNotes((currentNotes) => currentNotes.filter((note) => note.id !== noteId))
+    setSelectedNote((previous) => (previous?.id === noteId ? null : previous))
+
+    try {
+      await notesService.delete(noteId)
+      setPagination((previous) => ({
+        ...previous,
+        total: Math.max(previous.total - 1, 0),
+      }))
+      toast.success('Note deleted.')
+    } catch (deleteError) {
+      setNotes(previousNotes)
+      if (deletedNote) {
+        setSelectedNote((previous) => previous ?? deletedNote)
+      }
+      toast.error(getApiErrorMessage(deleteError))
+    }
+  }
+
+  const handleTogglePin = async (noteId) => {
+    const previousNotes = notes
+
+    setNotes((currentNotes) =>
+      currentNotes.map((note) =>
+        note.id === noteId ? { ...note, isPinned: !note.isPinned } : note,
+      ),
+    )
+
+    try {
+      const response = await notesService.togglePin(noteId)
+      const updatedNote = normalizeNote(response.data.data.note)
+
+      setNotes((currentNotes) =>
+        currentNotes.map((note) => (note.id === noteId ? updatedNote : note)),
+      )
+      setSelectedNote((previous) =>
+        previous?.id === noteId ? updatedNote : previous,
+      )
+      toast.success('Pin status updated.')
+    } catch (pinError) {
+      setNotes(previousNotes)
+      toast.error(getApiErrorMessage(pinError))
+    }
+  }
+
+  const handleViewNote = async (note) => {
+    setSelectedNote(note)
+
+    try {
+      const response = await notesService.getById(note.id)
+      setSelectedNote(normalizeNote(response.data.data.note))
+    } catch (viewError) {
+      setSelectedNote(null)
+      toast.error(getApiErrorMessage(viewError))
+    }
   }
 
   return (
@@ -144,7 +261,7 @@ export default function NotesPage() {
               Notes
             </h1>
             <p className="mt-2 text-app-text-muted">
-              Search, sort, edit in markdown, and trigger AI study actions from one surface.
+              Search, sort, edit in markdown, and organize your study notes.
             </p>
           </div>
 
@@ -152,13 +269,13 @@ export default function NotesPage() {
             <Input
               placeholder="Search notes"
               rightIcon={FiSearch}
-              value={localSearch}
-              onChange={(event) => setLocalSearch(event.target.value)}
+              value={filters.localSearch}
+              onChange={(event) => updateFilters({ localSearch: event.target.value })}
             />
             <select
               className="h-12 rounded-md border border-app-border bg-slate-950/45 px-4 text-sm text-app-text outline-none"
-              value={subjectFilter}
-              onChange={(event) => setSubjectFilter(event.target.value)}
+              value={filters.subjectFilter}
+              onChange={(event) => updateFilters({ subjectFilter: event.target.value })}
             >
               {subjects.map((subject) => (
                 <option key={subject} value={subject}>
@@ -168,8 +285,8 @@ export default function NotesPage() {
             </select>
             <select
               className="h-12 rounded-md border border-app-border bg-slate-950/45 px-4 text-sm text-app-text outline-none"
-              value={sortBy}
-              onChange={(event) => setSortBy(event.target.value)}
+              value={filters.sortBy}
+              onChange={(event) => updateFilters({ sortBy: event.target.value })}
             >
               {noteSortOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -184,26 +301,60 @@ export default function NotesPage() {
         </div>
       </section>
 
-      {filteredNotes.length ? (
-        <section className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-          {filteredNotes.map((note) => (
-            <NoteCard
-              key={note.id}
-              note={note}
-              onDelete={(noteId) => {
-                deleteNote(noteId)
-                toast.success('Note deleted.')
-              }}
-              onEdit={setEditorNote}
-              onShare={() => toast('Share will connect to backend later.', { icon: '🔗' })}
-              onToggleFavorite={(noteId) => {
-                toggleFavoriteNote(noteId)
-                toast.success('Favorite updated.')
-              }}
-              onView={setSelectedNote}
-            />
-          ))}
-        </section>
+      {isLoading ? (
+        <PageLoader label="Loading notes" />
+      ) : error ? (
+        <ErrorState
+          title="Could not load notes"
+          description={error}
+          action={<Button onClick={loadNotes}>Try Again</Button>}
+        />
+      ) : notes.length ? (
+        <>
+          <section className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+            {notes.map((note) => (
+              <NoteCard
+                key={note.id}
+                note={note}
+                onDelete={handleDeleteNote}
+                onEdit={(noteToEdit) => setEditorNote(toEditorForm(noteToEdit))}
+                onShare={() => toast('Sharing is not part of Module 4 yet.')}
+                onTogglePin={handleTogglePin}
+                onView={handleViewNote}
+              />
+            ))}
+          </section>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-app-border bg-white/4 p-4">
+            <p className="text-sm text-app-text-muted">
+              Page {pagination.page} of {pagination.pages} - {pagination.total} notes
+            </p>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="secondary"
+                icon={FiChevronLeft}
+                disabled={filters.page <= 1}
+                onClick={() =>
+                  updateFilters({ page: Math.max(filters.page - 1, 1) })
+                }
+              >
+                Prev
+              </Button>
+              <Button
+                size="sm"
+                variant="secondary"
+                icon={FiChevronRight}
+                disabled={filters.page >= pagination.pages}
+                onClick={() =>
+                  updateFilters({ page: Math.min(filters.page + 1, pagination.pages) })
+                }
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+        </>
       ) : (
         <EmptyState
           title="No notes found"
@@ -214,11 +365,10 @@ export default function NotesPage() {
 
       <NotePreviewModal
         note={selectedNote}
-        onAiAction={handleAiAction}
         onClose={() => setSelectedNote(null)}
         onEdit={(note) => {
           setSelectedNote(null)
-          setEditorNote(note)
+          setEditorNote(toEditorForm(note))
         }}
       />
 
@@ -234,20 +384,7 @@ export default function NotesPage() {
         }
         onSave={handleSaveNote}
         subjects={subjects}
-      />
-
-      <AIOutputModal
-        content={aiState.output}
-        isLoading={aiState.loading}
-        isOpen={Boolean(aiState.note)}
-        onClose={() => setAiState({ loading: false, note: null, output: '', title: '' })}
-        onCopy={() => {
-          navigator.clipboard.writeText(aiState.output)
-          toast.success('Copied AI output.')
-        }}
-        onRegenerate={() => handleAiAction('summary', aiState.note)}
-        onSave={() => toast.success('Saved to note actions queue.')}
-        title={aiState.title}
+        isSaving={isSaving}
       />
     </div>
   )

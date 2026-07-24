@@ -5,6 +5,7 @@ import Modal from './Modal.jsx'
 export default function NoteEditorModal({
   form,
   isOpen,
+  isSaving = false,
   onCancel,
   onChange,
   onSave,
@@ -21,6 +22,12 @@ export default function NoteEditorModal({
           label="Title"
           value={form.title}
           onChange={(event) => onChange('title', event.target.value)}
+        />
+        <Input
+          label="Tags"
+          placeholder="Comma separated tags"
+          value={form.tagsInput ?? ''}
+          onChange={(event) => onChange('tagsInput', event.target.value)}
         />
         <div className="space-y-2">
           <span className="hud-label text-app-text">Subject</span>
@@ -53,7 +60,9 @@ export default function NoteEditorModal({
             <Button variant="ghost" onClick={onCancel}>
               Cancel
             </Button>
-            <Button onClick={onSave}>Save</Button>
+            <Button loading={isSaving} onClick={onSave}>
+              Save
+            </Button>
           </div>
         </div>
       </div>

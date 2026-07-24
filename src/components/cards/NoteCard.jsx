@@ -9,7 +9,7 @@ export default function NoteCard({
   onDelete,
   onEdit,
   onShare,
-  onToggleFavorite,
+  onTogglePin,
   onView,
 }) {
   return (
@@ -20,14 +20,14 @@ export default function NoteCard({
             <h3 className="text-lg font-semibold text-app-text">{note.title}</h3>
             <div className="mt-2 flex flex-wrap gap-2">
               <Badge variant="info">{note.subject}</Badge>
-              {note.favorite ? <Badge variant="warning">Favorite</Badge> : null}
+              {note.isPinned ? <Badge variant="warning">Pinned</Badge> : null}
             </div>
           </div>
           <button
             type="button"
-            onClick={() => onToggleFavorite(note.id)}
+            onClick={() => onTogglePin(note.id)}
             className={`rounded-md p-2 transition ${
-              note.favorite ? 'bg-amber-300/12 text-amber-200' : 'text-app-text-muted hover:bg-white/6'
+              note.isPinned ? 'bg-amber-300/12 text-amber-200' : 'text-app-text-muted hover:bg-white/6'
             }`}
           >
             <FiStar />

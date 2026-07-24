@@ -5,7 +5,6 @@ import {
   activities,
   aiSuggestions,
   flashcardSets,
-  notes,
   notifications,
   quotes,
   tasks,
@@ -44,7 +43,7 @@ export function AppProvider({ children }) {
     return storedUser ? buildUserProfile(JSON.parse(storedUser)) : user
   })
   const [searchQuery, setSearchQuery] = useState('')
-  const [noteItems, setNoteItems] = useState(notes)
+  const [noteItems, setNoteItems] = useState([])
   const [taskItems, setTaskItems] = useState(tasks)
   const [flashcardItems] = useState(flashcardSets)
   const [activityItems] = useState(activities)

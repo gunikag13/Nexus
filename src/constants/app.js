@@ -19,8 +19,7 @@ export const navItems = [
 export const priorityOptions = ['High', 'Medium', 'Low']
 
 export const noteSortOptions = [
-  { label: 'Latest', value: 'latest' },
+  { label: 'Newest', value: 'newest' },
   { label: 'Oldest', value: 'oldest' },
-  { label: 'Favorites', value: 'favorites' },
-  { label: 'A-Z', value: 'alphabetical' },
+  { label: 'Pinned', value: 'pinned' },
 ]

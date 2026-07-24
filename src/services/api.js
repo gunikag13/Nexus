@@ -52,10 +52,12 @@ export const getApiErrorMessage = (error) => {
 }
 
 export const notesService = {
-  getAll: () => api.get('/notes'),
+  getAll: (params) => api.get('/notes', { params }),
+  getById: (id) => api.get(`/notes/${id}`),
   create: (payload) => api.post('/notes', payload),
   update: (id, payload) => api.put(`/notes/${id}`, payload),
   delete: (id) => api.delete(`/notes/${id}`),
+  togglePin: (id) => api.patch(`/notes/${id}/pin`),
 }
 
 export const flashcardsService = {

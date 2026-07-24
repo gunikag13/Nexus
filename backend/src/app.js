@@ -6,6 +6,7 @@ import helmet from 'helmet'
 import mongoose from 'mongoose'
 import morgan from 'morgan'
 import authRoutes from './routes/authRoutes.js'
+import noteRoutes from './routes/noteRoutes.js'
 
 dotenv.config()
 
@@ -24,6 +25,7 @@ app.use(express.urlencoded({ extended: true }))
 app.use(cookieParser())
 
 app.use('/api/auth', authRoutes)
+app.use('/api/notes', noteRoutes)
 
 app.get('/api/health', (_request, response) => {
   const isDatabaseConnected = mongoose.connection.readyState === 1
@@ -51,9 +53,23 @@ app.use((request, response) => {
 })
 
 app.use((error, _request, response, _next) => {
-  console.error('[APP] Unhandled error:', error.message)
+  const statusCode = error.statusCode || 500
 
-  response.status(error.statusCode || 500).json({
+  if (statusCode >= 500) {
+    console.error('[APP] Unhandled error:', error.message)
+  }
+
+  if (error.name === 'ValidationError') {
+    return response.status(400).json({
+      success: false,
+      message: Object.values(error.errors)
+        .map((validationError) => validationError.message)
+        .join(' '),
+      data: {},
+    })
+  }
+
+  return response.status(statusCode).json({
     success: false,
     message: error.message || 'Internal server error',
     data: {},
