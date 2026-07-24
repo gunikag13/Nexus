@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --bg: #020816;
+  --bg-muted: rgba(7, 16, 32, 0.78);
+  --bg-elevated: rgba(10, 20, 39, 0.92);
+  --panel: rgba(6, 14, 29, 0.82);
+  --panel-strong: rgba(9, 18, 35, 0.98);
+  --border: rgba(91, 120, 170, 0.24);
+  --text: #ecf3ff;
+  --text-muted: #7f93ba;
+  --accent: #66e3ff;
+  --accent-strong: #22c7f2;
+  --success: #30e7b2;
+  --warning: #ffb84d;
+  --danger: #ff6b8a;
+  --shadow: 0 30px 90px rgba(0, 0, 0, 0.48);
+  --font-sans: "Space Grotesk", "Plus Jakarta Sans", "Segoe UI", sans-serif;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #eef5ff;
+  --bg-muted: rgba(255, 255, 255, 0.8);
+  --bg-elevated: rgba(255, 255, 255, 0.97);
+  --panel: rgba(255, 255, 255, 0.9);
+  --panel-strong: rgba(255, 255, 255, 0.99);
+  --border: rgba(47, 84, 140, 0.12);
+  --text: #0d1b31;
+  --text-muted: #476283;
+  --accent: #0a84c6;
+  --accent-strong: #06659a;
+  --success: #068765;
+  --warning: #b36a00;
+  --danger: #d91f56;
+  --shadow: 0 26px 80px rgba(91, 120, 170, 0.18);
+}
+
+@theme inline {
+  --color-app-bg: var(--bg);
+  --color-app-bg-muted: var(--bg-muted);
+  --color-app-bg-elevated: var(--bg-elevated);
+  --color-app-panel: var(--panel);
+  --color-app-panel-strong: var(--panel-strong);
+  --color-app-border: var(--border);
+  --color-app-text: var(--text);
+  --color-app-text-muted: var(--text-muted);
+  --color-app-accent: var(--accent);
+  --color-app-accent-strong: var(--accent-strong);
+  --color-app-success: var(--success);
+  --color-app-warning: var(--warning);
+  --color-app-danger: var(--danger);
+  --font-sans: var(--font-sans);
+}
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+
+  html {
+    @apply scroll-smooth;
+  }
+
+  body {
+    @apply min-h-screen bg-app-bg font-sans text-app-text antialiased;
+    background-image:
+      linear-gradient(rgba(20, 46, 88, 0.18) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(20, 46, 88, 0.18) 1px, transparent 1px),
+      radial-gradient(circle at 20% 0%, rgba(23, 174, 255, 0.18), transparent 28%),
+      radial-gradient(circle at 80% 15%, rgba(0, 255, 194, 0.11), transparent 22%),
+      linear-gradient(180deg, #04101f 0%, #020816 60%, #020611 100%);
+    background-size: 42px 42px, 42px 42px, auto, auto, auto;
+  }
+
+  [data-theme='light'] body {
+    background-image:
+      linear-gradient(rgba(80, 126, 194, 0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(80, 126, 194, 0.08) 1px, transparent 1px),
+      radial-gradient(circle at 10% 0%, rgba(59, 130, 246, 0.12), transparent 32%),
+      radial-gradient(circle at 85% 10%, rgba(6, 182, 212, 0.08), transparent 22%),
+      linear-gradient(180deg, #f6faff, #edf4ff);
+    background-size: 42px 42px, 42px 42px, auto, auto, auto;
+  }
+
+  a {
+    @apply text-inherit no-underline;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+}
+
+@layer components {
+  .glass-panel {
+    @apply border border-app-border bg-app-panel shadow-[var(--shadow)] backdrop-blur-xl;
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.04), transparent 40%);
+  }
+
+  .glass-panel-strong {
+    @apply border border-app-border bg-app-panel-strong shadow-[var(--shadow)] backdrop-blur-xl;
+    background-image:
+      linear-gradient(180deg, rgba(102, 227, 255, 0.05), transparent 30%),
+      linear-gradient(180deg, rgba(255, 255, 255, 0.02), transparent 65%);
+  }
+
+  .app-shell {
+    @apply relative min-h-screen overflow-hidden;
+  }
+
+  .section-heading {
+    @apply text-lg font-semibold uppercase tracking-[0.18em] text-app-text md:text-xl;
+  }
+
+  .section-subtitle {
+    @apply text-sm text-app-text-muted;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-2 rounded-md border border-app-border bg-white/5 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.22em] text-app-text-muted;
+  }
+
+  .surface-grid {
+    @apply grid gap-4 md:gap-5;
+  }
+
+  .auth-backdrop {
+    @apply relative isolate min-h-screen overflow-hidden px-4 py-8 sm:px-6 lg:px-8;
+  }
+
+  .auth-backdrop::before {
+    content: '';
+    @apply absolute inset-x-0 top-0 -z-10 h-72 bg-gradient-to-b from-cyan-400/14 to-transparent blur-3xl;
+  }
+
+  .auth-backdrop::after {
+    content: '';
+    @apply absolute bottom-0 right-0 -z-10 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl;
+  }
+
+  .tech-frame {
+    @apply relative overflow-hidden;
+    clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
+  }
+
+  .tech-frame::after {
+    content: '';
+    @apply pointer-events-none absolute inset-0 border border-cyan-300/8;
+    clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 22px 100%, 0 calc(100% - 22px));
+  }
+
+  .hud-label {
+    @apply text-[11px] uppercase tracking-[0.28em] text-app-text-muted;
+  }
+}
