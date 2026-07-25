@@ -2,6 +2,7 @@ import Activity from '../models/Activity.js'
 import Flashcard from '../models/Flashcard.js'
 import Note from '../models/Note.js'
 import Quiz from '../models/Quiz.js'
+import Task from '../models/Task.js'
 
 const startOfDay = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate())
 
@@ -32,6 +33,7 @@ export const getDashboard = async ({ userId }) => {
     recentNotes,
     recentActivity,
     chartActivities,
+    pendingTasks,
   ] = await Promise.all([
     Note.countDocuments({ user: userId }),
     Flashcard.countDocuments({ user: userId }),
@@ -39,6 +41,7 @@ export const getDashboard = async ({ userId }) => {
     Note.find({ user: userId }).sort({ updatedAt: -1 }).limit(3),
     Activity.find({ user: userId }).sort({ createdAt: -1 }).limit(6),
     Activity.find({ user: userId, createdAt: { $gte: sevenDaysAgo } }),
+    Task.countDocuments({ user: userId, completed: false }),
   ])
 
   const activityByDay = new Map()
@@ -65,10 +68,9 @@ export const getDashboard = async ({ userId }) => {
     totalNotes,
     totalFlashcards,
     totalQuizzes,
-    pendingTasks: 0,
+    pendingTasks,
     recentNotes: recentNotes.map(formatNote),
     recentActivity: recentActivity.map(formatActivity),
     studyChart: [...activityByDay.values()],
   }
 }
-

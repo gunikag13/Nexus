@@ -10,10 +10,9 @@ import Input from '../../components/forms/Input.jsx'
 import AIOutputModal from '../../components/modals/AIOutputModal.jsx'
 import NoteEditorModal from '../../components/modals/NoteEditorModal.jsx'
 import NotePreviewModal from '../../components/modals/NotePreviewModal.jsx'
-import { noteSortOptions } from '../../constants/app.js'
+import { noteSortOptions, subjectOptions } from '../../constants/app.js'
 import { useAppContext } from '../../hooks/useAppContext.js'
 import { aiService, getApiErrorMessage, notesService } from '../../services/api.js'
-import { subjects } from '../../utils/mockData.js'
 
 const PAGE_LIMIT = 12
 
@@ -276,6 +275,11 @@ export default function NotesPage() {
         return
       }
 
+      if (!aiService[type]) {
+        toast.error('This AI action is not available yet.')
+        return
+      }
+
       const response = await aiService[type](note.id)
 
       setAiState({
@@ -333,7 +337,7 @@ export default function NotesPage() {
               value={filters.subjectFilter}
               onChange={(event) => updateFilters({ subjectFilter: event.target.value })}
             >
-              {subjects.map((subject) => (
+              {subjectOptions.map((subject) => (
                 <option key={subject} value={subject}>
                   {subject}
                 </option>
@@ -457,7 +461,7 @@ export default function NotesPage() {
           }))
         }
         onSave={handleSaveNote}
-        subjects={subjects}
+        subjects={subjectOptions}
         isSaving={isSaving}
       />
     </div>

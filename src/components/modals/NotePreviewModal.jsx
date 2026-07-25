@@ -5,7 +5,7 @@ import Modal from './Modal.jsx'
 import { formatDate } from '../../utils/helpers.js'
 
 const aiActions = [
-  { label: 'Summarize', type: 'summary' },
+  { label: 'Summarize', type: 'summarize' },
   { label: "Explain Like I'm 5", type: 'explain' },
   { label: 'Key Concepts', type: 'keyConcepts' },
   { label: 'Study Tips', type: 'studyTips' },

@@ -11,8 +11,8 @@ const prompts = {
   mnemonics: 'Create memorable mnemonics where appropriate.',
   revisionSheet: 'Return a compact one-page revision guide.',
   flashcards:
-    'Generate exactly 10 flashcards. Return only valid JSON as an array of objects with question and answer string fields.',
-  quiz: 'Generate exactly 10 MCQs. Return only valid JSON as an array of objects with question, options array of 4 strings, correctAnswer number from 0 to 3, and explanation string.',
+    'Generate exactly 10 flashcards. Return only valid JSON in this shape: {"items":[{"question":"","answer":""}]}',
+  quiz: 'Generate exactly 10 MCQs. Return only valid JSON in this shape: {"items":[{"question":"","options":["","","",""],"correctAnswer":0,"explanation":""}]}',
 }
 
 const createHttpError = (statusCode, message) => {
@@ -82,6 +82,12 @@ export const generateText = async ({ type, note }) => {
 
     return response.choices[0]?.message?.content?.trim() || ''
   } catch (error) {
+	console.error("========== OPENAI ERROR ==========");
+  console.error(error);
+  console.error("Status:", error.status);
+  console.error("Code:", error.code);
+  console.error("Message:", error.message);
+  console.error("==================================");
     normalizeOpenAIError(error)
   }
 }
@@ -111,4 +117,3 @@ export const generateJson = async ({ type, note }) => {
     normalizeOpenAIError(error)
   }
 }
-

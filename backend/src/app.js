@@ -11,6 +11,7 @@ import dashboardRoutes from './routes/dashboardRoutes.js'
 import flashcardRoutes from './routes/flashcardRoutes.js'
 import noteRoutes from './routes/noteRoutes.js'
 import quizRoutes from './routes/quizRoutes.js'
+import taskRoutes from './routes/taskRoutes.js'
 
 dotenv.config()
 
@@ -34,6 +35,7 @@ app.use('/api/ai', aiRoutes)
 app.use('/api/flashcards', flashcardRoutes)
 app.use('/api/quizzes', quizRoutes)
 app.use('/api/dashboard', dashboardRoutes)
+app.use('/api/tasks', taskRoutes)
 
 app.get('/api/health', (_request, response) => {
   const isDatabaseConnected = mongoose.connection.readyState === 1

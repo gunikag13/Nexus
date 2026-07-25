@@ -18,6 +18,8 @@ export const navItems = [
 
 export const priorityOptions = ['High', 'Medium', 'Low']
 
+export const subjectOptions = ['All', 'AI', 'DBMS', 'OS', 'Math', 'General', 'Getting Started', 'AI Guide', 'Computer Science']
+
 export const noteSortOptions = [
   { label: 'Newest', value: 'newest' },
   { label: 'Oldest', value: 'oldest' },

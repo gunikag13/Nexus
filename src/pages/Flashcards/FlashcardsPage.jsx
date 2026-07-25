@@ -14,7 +14,7 @@ import {
   flashcardsService,
   getApiErrorMessage,
 } from '../../services/api.js'
-import { subjects } from '../../utils/mockData.js'
+import { subjectOptions } from '../../constants/app.js'
 
 export default function FlashcardsPage() {
   const { searchQuery } = useAppContext()
@@ -138,7 +138,7 @@ export default function FlashcardsPage() {
               value={subjectFilter}
               onChange={(event) => setSubjectFilter(event.target.value)}
             >
-              {subjects.map((subject) => (
+              {subjectOptions.map((subject) => (
                 <option key={subject} value={subject}>
                   {subject}
                 </option>

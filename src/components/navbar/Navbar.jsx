@@ -10,7 +10,6 @@ export default function Navbar({ onMenuClick }) {
   const {
     currentUser,
     logout,
-    notificationItems,
     searchQuery,
     setSearchQuery,
     toggleTheme,
@@ -51,7 +50,7 @@ export default function Navbar({ onMenuClick }) {
         <div className="hidden rounded-md border border-app-border bg-white/6 px-3 py-2 text-right md:block">
           <p className="hud-label">Signal</p>
           <p className="mt-1 text-sm font-medium text-app-text">
-            {notificationItems[0].label}
+            Workspace ready
           </p>
         </div>
         <div className="relative">

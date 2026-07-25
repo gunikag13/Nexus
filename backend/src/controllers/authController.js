@@ -1,4 +1,5 @@
 import User from '../models/User.js'
+import { createStarterContent } from '../services/onboardingService.js'
 import { generateToken } from '../utils/generateToken.js'
 
 const emailRegex = /^\S+@\S+\.\S+$/
@@ -52,6 +53,8 @@ export const signup = async (request, response, next) => {
       email,
       password,
     })
+    await createStarterContent(user._id)
+
     const token = generateToken(user._id)
 
     return sendResponse(response, 201, true, 'Signup successful.', {

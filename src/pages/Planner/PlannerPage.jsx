@@ -1,35 +1,65 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
 import { FiCalendar, FiPlus } from 'react-icons/fi'
 import Button from '../../components/buttons/Button.jsx'
 import Badge from '../../components/cards/Badge.jsx'
+import ErrorState from '../../components/cards/ErrorState.jsx'
+import PageLoader from '../../components/cards/PageLoader.jsx'
 import TaskCard from '../../components/cards/TaskCard.jsx'
 import Input from '../../components/forms/Input.jsx'
 import { priorityOptions } from '../../constants/app.js'
 import { useAppContext } from '../../hooks/useAppContext.js'
+import { getApiErrorMessage, tasksService } from '../../services/api.js'
 
 export default function PlannerPage() {
-  const { addTask, deleteTask, searchQuery, taskItems, toggleTask } = useAppContext()
+  const { searchQuery } = useAppContext()
+  const [taskItems, setTaskItems] = useState([])
   const [showForm, setShowForm] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState('')
   const [form, setForm] = useState({
     title: '',
     priority: 'Medium',
-    deadline: '2026-07-25',
+    deadline: new Date().toISOString().slice(0, 10),
   })
+
+  const loadTasks = async () => {
+    setIsLoading(true)
+    setError('')
+
+    try {
+      const response = await tasksService.getAll()
+      setTaskItems(response.data.data.tasks)
+    } catch (loadError) {
+      setError(getApiErrorMessage(loadError))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      loadTasks()
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [])
 
   const filteredTasks = taskItems.filter((task) =>
     task.title.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 
   const dashboardGroups = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10)
+
     return {
-      today: filteredTasks.filter((task) => task.deadline.startsWith('2026-07-22')),
+      today: filteredTasks.filter((task) => task.deadline.startsWith(today)),
       upcoming: filteredTasks.filter((task) => !task.completed),
       completed: filteredTasks.filter((task) => task.completed),
     }
   }, [filteredTasks])
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
     if (!form.title.trim()) {
@@ -37,17 +67,78 @@ export default function PlannerPage() {
       return
     }
 
-    addTask({
-      ...form,
-      deadline: new Date(form.deadline).toISOString(),
-    })
-    toast.success('Task added.')
-    setForm({
-      title: '',
-      priority: 'Medium',
-      deadline: '2026-07-25',
-    })
-    setShowForm(false)
+    try {
+      const response = await tasksService.create({
+        ...form,
+        deadline: new Date(form.deadline).toISOString(),
+      })
+
+      setTaskItems((previous) => [response.data.data.task, ...previous])
+      toast.success('Task added.')
+      setForm({
+        title: '',
+        priority: 'Medium',
+        deadline: new Date().toISOString().slice(0, 10),
+      })
+      setShowForm(false)
+    } catch (createError) {
+      toast.error(getApiErrorMessage(createError))
+    }
+  }
+
+  const handleDeleteTask = async (taskId) => {
+    const previousTasks = taskItems
+
+    setTaskItems((previous) => previous.filter((task) => task.id !== taskId))
+
+    try {
+      await tasksService.delete(taskId)
+      toast.success('Task deleted.')
+    } catch (deleteError) {
+      setTaskItems(previousTasks)
+      toast.error(getApiErrorMessage(deleteError))
+    }
+  }
+
+  const handleToggleTask = async (taskId) => {
+    const task = taskItems.find((item) => item.id === taskId)
+    const previousTasks = taskItems
+
+    if (!task) return
+
+    setTaskItems((previous) =>
+      previous.map((item) =>
+        item.id === taskId ? { ...item, completed: !item.completed } : item,
+      ),
+    )
+
+    try {
+      const response = await tasksService.update(taskId, {
+        completed: !task.completed,
+      })
+
+      setTaskItems((previous) =>
+        previous.map((item) => (item.id === taskId ? response.data.data.task : item)),
+      )
+      toast.success('Task updated.')
+    } catch (updateError) {
+      setTaskItems(previousTasks)
+      toast.error(getApiErrorMessage(updateError))
+    }
+  }
+
+  if (isLoading) {
+    return <PageLoader label="Loading planner" />
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Could not load planner"
+        description={error}
+        action={<Button onClick={loadTasks}>Try Again</Button>}
+      />
+    )
   }
 
   return (
@@ -143,14 +234,8 @@ export default function PlannerPage() {
           <TaskCard
             key={task.id}
             task={task}
-            onDelete={(taskId) => {
-              deleteTask(taskId)
-              toast.success('Task deleted.')
-            }}
-            onToggle={(taskId) => {
-              toggleTask(taskId)
-              toast.success('Task updated.')
-            }}
+            onDelete={handleDeleteTask}
+            onToggle={handleToggleTask}
           />
         ))}
       </section>
