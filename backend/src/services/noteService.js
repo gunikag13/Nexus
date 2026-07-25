@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import Note from '../models/Note.js'
+import { createActivity } from './activityService.js'
 
 const MAX_TITLE_LENGTH = 150
 const DEFAULT_PAGE = 1
@@ -117,10 +118,20 @@ const buildListFilter = ({ userId, search, subject }) => {
 export const createNote = async ({ userId, payload }) => {
   validateNotePayload(payload)
 
-  return Note.create({
+  const note = await Note.create({
     ...buildNotePayload(payload),
     user: userId,
   })
+
+  await createActivity({
+    userId,
+    noteId: note._id,
+    type: 'NOTE_CREATED',
+    title: 'Created Note',
+    detail: note.title,
+  })
+
+  return note
 }
 
 export const getNotes = async ({ userId, query }) => {
@@ -157,7 +168,17 @@ export const updateNote = async ({ noteId, userId, payload }) => {
   const note = await getOwnedNote(noteId, userId)
   note.set(buildNotePayload(payload))
 
-  return note.save()
+  const updatedNote = await note.save()
+
+  await createActivity({
+    userId,
+    noteId: note._id,
+    type: 'NOTE_EDITED',
+    title: 'Edited Note',
+    detail: note.title,
+  })
+
+  return updatedNote
 }
 
 export const deleteNote = async ({ noteId, userId }) => {

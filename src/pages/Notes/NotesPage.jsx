@@ -7,11 +7,12 @@ import ErrorState from '../../components/cards/ErrorState.jsx'
 import NoteCard from '../../components/cards/NoteCard.jsx'
 import PageLoader from '../../components/cards/PageLoader.jsx'
 import Input from '../../components/forms/Input.jsx'
+import AIOutputModal from '../../components/modals/AIOutputModal.jsx'
 import NoteEditorModal from '../../components/modals/NoteEditorModal.jsx'
 import NotePreviewModal from '../../components/modals/NotePreviewModal.jsx'
 import { noteSortOptions } from '../../constants/app.js'
 import { useAppContext } from '../../hooks/useAppContext.js'
-import { getApiErrorMessage, notesService } from '../../services/api.js'
+import { aiService, getApiErrorMessage, notesService } from '../../services/api.js'
 import { subjects } from '../../utils/mockData.js'
 
 const PAGE_LIMIT = 12
@@ -55,6 +56,12 @@ export default function NotesPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
   const [error, setError] = useState('')
+  const [aiState, setAiState] = useState({
+    generatingAction: '',
+    output: '',
+    title: '',
+    type: '',
+  })
 
   const blankNote = useMemo(
     () => ({
@@ -248,6 +255,55 @@ export default function NotesPage() {
     }
   }
 
+  const handleAiAction = async (type, note) => {
+    setAiState({
+      generatingAction: type,
+      output: '',
+      title: '',
+      type,
+    })
+
+    try {
+      if (type === 'flashcards') {
+        await aiService.flashcards(note.id)
+        toast.success('Flashcards generated.')
+        return
+      }
+
+      if (type === 'quiz') {
+        await aiService.quiz(note.id)
+        toast.success('Quiz generated.')
+        return
+      }
+
+      const response = await aiService[type](note.id)
+
+      setAiState({
+        generatingAction: '',
+        output: response.data.data.output,
+        title: response.data.message,
+        type,
+      })
+    } catch (aiError) {
+      setAiState({
+        generatingAction: '',
+        output: '',
+        title: '',
+        type: '',
+      })
+      toast.error(getApiErrorMessage(aiError))
+    } finally {
+      if (type === 'flashcards' || type === 'quiz') {
+        setAiState({
+          generatingAction: '',
+          output: '',
+          title: '',
+          type: '',
+        })
+      }
+    }
+  }
+
   return (
     <div className="surface-grid">
       <section className="glass-panel-strong tech-frame rounded-[24px] p-6">
@@ -364,12 +420,30 @@ export default function NotesPage() {
       )}
 
       <NotePreviewModal
+        generatingAction={aiState.generatingAction}
         note={selectedNote}
+        onAiAction={handleAiAction}
         onClose={() => setSelectedNote(null)}
         onEdit={(note) => {
           setSelectedNote(null)
           setEditorNote(toEditorForm(note))
         }}
+      />
+
+      <AIOutputModal
+        content={aiState.output}
+        isLoading={Boolean(aiState.generatingAction && aiState.output)}
+        isOpen={Boolean(aiState.output)}
+        onClose={() =>
+          setAiState({ generatingAction: '', output: '', title: '', type: '' })
+        }
+        onCopy={() => {
+          navigator.clipboard.writeText(aiState.output)
+          toast.success('Copied AI output.')
+        }}
+        onRegenerate={() => selectedNote && handleAiAction(aiState.type, selectedNote)}
+        onSave={() => toast.success('AI output is ready to copy into your notes.')}
+        title={aiState.title || 'AI Output'}
       />
 
       <NoteEditorModal

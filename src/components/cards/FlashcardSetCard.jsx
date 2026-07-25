@@ -2,7 +2,12 @@ import Button from '../buttons/Button.jsx'
 import BaseCard from './BaseCard.jsx'
 import { formatDate } from '../../utils/helpers.js'
 
-export default function FlashcardSetCard({ flashcardSet, onOpen }) {
+export default function FlashcardSetCard({
+  flashcardSet,
+  onDelete,
+  onOpen,
+  onRegenerate,
+}) {
   return (
     <BaseCard className="flex h-full flex-col justify-between gap-6">
       <div className="space-y-4">
@@ -23,9 +28,17 @@ export default function FlashcardSetCard({ flashcardSet, onOpen }) {
         <p className="text-xs uppercase tracking-[0.18em] text-app-text-muted">
           Created {formatDate(flashcardSet.createdDate)}
         </p>
-        <Button size="sm" variant="secondary" onClick={() => onOpen(flashcardSet)}>
-          Open
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="secondary" onClick={() => onOpen(flashcardSet)}>
+            Open
+          </Button>
+          <Button size="sm" variant="ghost" onClick={() => onRegenerate(flashcardSet)}>
+            Regenerate
+          </Button>
+          <Button size="sm" variant="danger" onClick={() => onDelete(flashcardSet)}>
+            Delete
+          </Button>
+        </div>
       </div>
     </BaseCard>
   )

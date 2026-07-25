@@ -4,7 +4,24 @@ import Badge from '../cards/Badge.jsx'
 import Modal from './Modal.jsx'
 import { formatDate } from '../../utils/helpers.js'
 
-export default function NotePreviewModal({ note, onAiAction, onClose, onEdit }) {
+const aiActions = [
+  { label: 'Summarize', type: 'summary' },
+  { label: "Explain Like I'm 5", type: 'explain' },
+  { label: 'Key Concepts', type: 'keyConcepts' },
+  { label: 'Study Tips', type: 'studyTips' },
+  { label: 'Mnemonics', type: 'mnemonics' },
+  { label: 'Revision Sheet', type: 'revisionSheet' },
+  { label: 'Generate Flashcards', type: 'flashcards' },
+  { label: 'Generate Quiz', type: 'quiz' },
+]
+
+export default function NotePreviewModal({
+  generatingAction,
+  note,
+  onAiAction,
+  onClose,
+  onEdit,
+}) {
   return (
     <Modal isOpen={Boolean(note)} onClose={onClose} title={note?.title ?? 'Preview'}>
       {note ? (
@@ -26,18 +43,17 @@ export default function NotePreviewModal({ note, onAiAction, onClose, onEdit }) 
 
           {onAiAction ? (
             <div className="grid gap-3 md:grid-cols-2">
-              <Button variant="secondary" onClick={() => onAiAction('summary', note)}>
-                Summarize
-              </Button>
-              <Button variant="secondary" onClick={() => onAiAction('eli5', note)}>
-                Explain Like I&apos;m 5
-              </Button>
-              <Button variant="secondary" onClick={() => onAiAction('flashcards', note)}>
-                Generate Flashcards
-              </Button>
-              <Button variant="secondary" onClick={() => onAiAction('quiz', note)}>
-                Generate Quiz
-              </Button>
+              {aiActions.map((action) => (
+                <Button
+                  key={action.type}
+                  disabled={Boolean(generatingAction)}
+                  loading={generatingAction === action.type}
+                  variant="secondary"
+                  onClick={() => onAiAction(action.type, note)}
+                >
+                  {action.label}
+                </Button>
+              ))}
             </div>
           ) : null}
 

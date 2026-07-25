@@ -1,34 +1,97 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
 import { FiChevronLeft, FiChevronRight, FiLayers, FiShuffle } from 'react-icons/fi'
 import Button from '../../components/buttons/Button.jsx'
 import EmptyState from '../../components/cards/EmptyState.jsx'
+import ErrorState from '../../components/cards/ErrorState.jsx'
 import FlashcardSetCard from '../../components/cards/FlashcardSetCard.jsx'
+import PageLoader from '../../components/cards/PageLoader.jsx'
 import Modal from '../../components/modals/Modal.jsx'
 import { useAppContext } from '../../hooks/useAppContext.js'
+import {
+  aiService,
+  flashcardsService,
+  getApiErrorMessage,
+} from '../../services/api.js'
 import { subjects } from '../../utils/mockData.js'
 
 export default function FlashcardsPage() {
-  const { flashcardItems, searchQuery } = useAppContext()
+  const { searchQuery } = useAppContext()
+  const [flashcardSets, setFlashcardSets] = useState([])
   const [selectedSet, setSelectedSet] = useState(null)
   const [cardIndex, setCardIndex] = useState(0)
   const [isFlipped, setIsFlipped] = useState(false)
   const [subjectFilter, setSubjectFilter] = useState('All')
+  const [isLoading, setIsLoading] = useState(true)
+  const [busyDeckId, setBusyDeckId] = useState('')
+  const [error, setError] = useState('')
+
+  const loadDecks = async () => {
+    setIsLoading(true)
+    setError('')
+
+    try {
+      const response = await flashcardsService.getAll()
+      setFlashcardSets(response.data.data.decks)
+    } catch (loadError) {
+      setError(getApiErrorMessage(loadError))
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      loadDecks()
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [])
 
   const filteredSets = useMemo(() => {
-    return flashcardItems.filter((set) => {
+    return flashcardSets.filter((set) => {
       const matchesQuery = `${set.title} ${set.subject}`
         .toLowerCase()
         .includes(searchQuery.toLowerCase())
       const matchesSubject = subjectFilter === 'All' || set.subject === subjectFilter
       return matchesQuery && matchesSubject
     })
-  }, [flashcardItems, searchQuery, subjectFilter])
+  }, [flashcardSets, searchQuery, subjectFilter])
 
   const openSet = (flashcardSet) => {
     setSelectedSet(flashcardSet)
     setCardIndex(0)
     setIsFlipped(false)
+  }
+
+  const handleDeleteDeck = async (flashcardSet) => {
+    const previousSets = flashcardSets
+
+    setFlashcardSets((sets) => sets.filter((set) => set.noteId !== flashcardSet.noteId))
+    setSelectedSet((current) => (current?.noteId === flashcardSet.noteId ? null : current))
+
+    try {
+      await flashcardsService.deleteDeck(flashcardSet.noteId)
+      toast.success('Flashcard deck deleted.')
+    } catch (deleteError) {
+      setFlashcardSets(previousSets)
+      toast.error(getApiErrorMessage(deleteError))
+    }
+  }
+
+  const handleRegenerateDeck = async (flashcardSet) => {
+    setBusyDeckId(flashcardSet.noteId)
+
+    try {
+      await aiService.flashcards(flashcardSet.noteId)
+      await loadDecks()
+      toast.success('Flashcard deck regenerated.')
+    } catch (regenerateError) {
+      toast.error(getApiErrorMessage(regenerateError))
+    } finally {
+      setBusyDeckId('')
+    }
   }
 
   const currentCard = selectedSet?.cards[cardIndex]
@@ -66,7 +129,7 @@ export default function FlashcardsPage() {
               Flashcards
             </h1>
             <p className="mt-2 text-app-text-muted">
-              Organize subject-wise sets and practice with flip motion, shuffle, and progress tracking.
+              Practice generated decks with flip motion, shuffle, and progress tracking.
             </p>
           </div>
           <div className="w-full max-w-56">
@@ -85,20 +148,32 @@ export default function FlashcardsPage() {
         </div>
       </section>
 
-      {filteredSets.length ? (
+      {isLoading ? (
+        <PageLoader label="Loading flashcards" />
+      ) : error ? (
+        <ErrorState
+          title="Could not load flashcards"
+          description={error}
+          action={<Button onClick={loadDecks}>Try Again</Button>}
+        />
+      ) : filteredSets.length ? (
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filteredSets.map((flashcardSet) => (
             <FlashcardSetCard
               key={flashcardSet.id}
               flashcardSet={flashcardSet}
+              onDelete={handleDeleteDeck}
               onOpen={openSet}
+              onRegenerate={
+                busyDeckId === flashcardSet.noteId ? () => {} : handleRegenerateDeck
+              }
             />
           ))}
         </section>
       ) : (
         <EmptyState
-          title="No flashcard sets match"
-          description="Try another search or subject filter to surface your saved sets."
+          title="No flashcard decks yet"
+          description="Generate flashcards from a note to start practicing active recall."
         />
       )}
 
@@ -107,7 +182,7 @@ export default function FlashcardsPage() {
         onClose={() => setSelectedSet(null)}
         title={selectedSet?.title ?? 'Flashcards'}
       >
-        {selectedSet ? (
+        {selectedSet && currentCard ? (
           <div className="space-y-6">
             <div className="h-2 overflow-hidden rounded-full bg-white/8">
               <div className="h-full bg-cyan-300" style={{ width: `${progress}%` }} />

@@ -60,8 +60,29 @@ export const notesService = {
   togglePin: (id) => api.patch(`/notes/${id}/pin`),
 }
 
+export const aiService = {
+  summarize: (noteId) => api.post('/ai/summarize', { noteId }),
+  explain: (noteId) => api.post('/ai/explain', { noteId }),
+  keyConcepts: (noteId) => api.post('/ai/key-concepts', { noteId }),
+  studyTips: (noteId) => api.post('/ai/study-tips', { noteId }),
+  mnemonics: (noteId) => api.post('/ai/mnemonics', { noteId }),
+  revisionSheet: (noteId) => api.post('/ai/revision-sheet', { noteId }),
+  flashcards: (noteId) => api.post('/ai/flashcards', { noteId }),
+  quiz: (noteId) => api.post('/ai/quiz', { noteId }),
+}
+
 export const flashcardsService = {
   getAll: () => api.get('/flashcards'),
+  deleteDeck: (noteId) => api.delete(`/flashcards/decks/${noteId}`),
+}
+
+export const quizService = {
+  getAll: () => api.get('/quizzes'),
+  complete: (noteId, payload) => api.post(`/quizzes/${noteId}/complete`, payload),
+}
+
+export const dashboardService = {
+  get: () => api.get('/dashboard'),
 }
 
 export const tasksService = {

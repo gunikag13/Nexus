@@ -5,8 +5,12 @@ import express from 'express'
 import helmet from 'helmet'
 import mongoose from 'mongoose'
 import morgan from 'morgan'
+import aiRoutes from './routes/aiRoutes.js'
 import authRoutes from './routes/authRoutes.js'
+import dashboardRoutes from './routes/dashboardRoutes.js'
+import flashcardRoutes from './routes/flashcardRoutes.js'
 import noteRoutes from './routes/noteRoutes.js'
+import quizRoutes from './routes/quizRoutes.js'
 
 dotenv.config()
 
@@ -26,6 +30,10 @@ app.use(cookieParser())
 
 app.use('/api/auth', authRoutes)
 app.use('/api/notes', noteRoutes)
+app.use('/api/ai', aiRoutes)
+app.use('/api/flashcards', flashcardRoutes)
+app.use('/api/quizzes', quizRoutes)
+app.use('/api/dashboard', dashboardRoutes)
 
 app.get('/api/health', (_request, response) => {
   const isDatabaseConnected = mongoose.connection.readyState === 1
