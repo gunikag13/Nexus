@@ -121,8 +121,8 @@ NEXUS is designed for:
 
 **Gunika Gupta**
 
-B.Tech – Computer Science & Engineering
-
+B.Tech – Information technology
+1st year student
 Indira Gandhi Delhi Technical University for Women (IGDTUW)
 
 NEXUS was developed as a full-stack project to strengthen practical skills in software engineering, backend development, database management, cloud deployment, authentication systems, and AI integration.
@@ -133,11 +133,11 @@ NEXUS was developed as a full-stack project to strengthen practical skills in so
 
 ### Frontend
 
-> *(Add your Vercel URL here)*
+> *(https://nexus-three-topaz.vercel.app)*
 
 ### Backend API
 
-> *(Add your Render URL here)*
+> *(https://nexus-3llb.onrender.com)*
 
 ---
 

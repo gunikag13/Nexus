@@ -17,7 +17,7 @@ http://localhost:5000/api
 ### Production
 
 ```text
-https://your-render-url.onrender.com/api
+https://nexus-three-topaz.vercel.app/
 ```
 
 ---
