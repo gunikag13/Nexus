@@ -153,8 +153,7 @@ and
 
 B.Tech Information Technology
 IGDTUW(Indira Gandhi Delhi Technical University for women)
-### Linkedin
-**www.linkedin.com/in/gunika-gupta-220208374**
+
 ---
 
 ## ⭐ If you like this project...
