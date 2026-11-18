@@ -148,6 +148,8 @@ NEXUS-Showcase/images
 # 👩‍💻 Developed By
 
 **Gunika Gupta**
+and
+**Komal Kumari**
 
 B.Tech Information Technology
 IGDTUW(Indira Gandhi Delhi Technical University for women)
